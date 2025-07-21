@@ -1,10 +1,10 @@
 const { sendTelegramAlert } = require('./telegram');
 
-const ALERT_COOLDOWN = 60 * 60 * 1000; // 1h
+const ALERT_COOLDOWN = 60 * 60 * 1000; // 1 hora
 const DAILY_LIMIT = 100;
 
-const alertLog = new Map();
-const alertCountByDay = new Map();
+const alertLog = new Map(); // `${symbol}_${type}` → timestamp
+const alertCountByDay = new Map(); // YYYY-MM-DD → count
 
 function resetDailyCount() {
   const today = new Date().toISOString().slice(0, 10);
@@ -17,9 +17,9 @@ function canSendAlert(symbol, type) {
   resetDailyCount();
   const now = Date.now();
   const key = `${symbol}_${type}`;
-
   const today = new Date().toISOString().slice(0, 10);
-  const count = alertCountByDay.get(today) || 0;
+  let count = alertCountByDay.get(today) || 0;
+
   if (count >= DAILY_LIMIT) return false;
 
   if (!alertLog.has(key) || now - alertLog.get(key) > ALERT_COOLDOWN) {
@@ -56,51 +56,43 @@ async function analyzeAndAlert(symbol, timeframe, candles, pivots, chatId) {
   const prev = candles.at(-2);
   if (!last || !prev) return;
 
-  const avgVol = candles.map(c => c.volume).reduce((a, b) => a + b, 0) / candles.length;
+  const volumes = candles.map(c => c.volume);
+  const avgVolume = volumes.reduce((a, b) => a + b, 0) / volumes.length;
+
   const { pivot, R1, S1 } = pivots;
 
-  // Compra
-  if (
-    prev.close <= R1 &&
-    last.close > R1 &&
-    isStrongCandle(last) &&
-    isHighVolume(last, avgVol)
-  ) {
+  if (prev.close <= R1 && last.close > R1 && isStrongCandle(last) && isHighVolume(last, avgVolume)) {
     const dist = Math.abs(last.close - R1) / R1;
     if (dist <= 0.002) {
       const entry = last.close;
       const sl = pivot;
-      const tp = entry + (entry - sl) * 3;
+      const risk = entry - sl;
+      const tp = entry + 3 * risk;
+
       if (canSendAlert(symbol, 'compra')) {
         const time = new Date().toISOString();
         const msg = formatAlertMessage(symbol, 'compra', entry, sl, tp, time);
         await sendTelegramAlert(chatId, msg);
-        console.log(`[${time}] Alerta COMPRA enviado para ${symbol} (${timeframe})`);
+        console.log(`[${time}] ALERTA COMPRA enviado para ${symbol}`);
       }
     }
   }
-  // Venda
-  else if (
-    prev.close >= S1 &&
-    last.close < S1 &&
-    isStrongCandle(last) &&
-    isHighVolume(last, avgVol)
-  ) {
+
+  if (prev.close >= S1 && last.close < S1 && isStrongCandle(last) && isHighVolume(last, avgVolume)) {
     const dist = Math.abs(last.close - S1) / S1;
     if (dist <= 0.002) {
       const entry = last.close;
       const sl = pivot;
-      const tp = entry - (sl - entry) * 3;
+      const risk = sl - entry;
+      const tp = entry - 3 * risk;
+
       if (canSendAlert(symbol, 'venda')) {
         const time = new Date().toISOString();
         const msg = formatAlertMessage(symbol, 'venda', entry, sl, tp, time);
         await sendTelegramAlert(chatId, msg);
-        console.log(`[${time}] Alerta VENDA enviado para ${symbol} (${timeframe})`);
+        console.log(`[${time}] ALERTA VENDA enviado para ${symbol}`);
       }
     }
-  } else {
-    const time = new Date().toISOString();
-    console.log(`[${time}] ${symbol} (${timeframe}): Nenhum sinal válido.`);
   }
 }
 

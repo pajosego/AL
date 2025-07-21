@@ -1,17 +1,24 @@
 const axios = require('axios');
-const TELEGRAM_BOT_TOKEN = process.env.TELEGRAM_BOT_TOKEN;
-const TELEGRAM_API_URL = `https://api.telegram.org/bot${TELEGRAM_BOT_TOKEN}`;
 
-async function sendTelegramAlert(chatId, message) {
+const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
+
+async function sendTelegramAlert(chatId, text) {
+  if (!TELEGRAM_TOKEN) {
+    console.error('❌ TELEGRAM_TOKEN não definido.');
+    return;
+  }
+
+  const url = `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`;
   try {
-    await axios.post(`${TELEGRAM_API_URL}/sendMessage`, {
+    await axios.post(url, {
       chat_id: chatId,
-      text: message,
+      text,
       parse_mode: 'Markdown'
     });
-  } catch (error) {
-    console.error('Erro ao enviar mensagem Telegram:', error.message);
+  } catch (err) {
+    console.error('Erro ao enviar alerta para Telegram:', err.message);
   }
 }
 
 module.exports = { sendTelegramAlert };
+

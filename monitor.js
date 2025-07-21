@@ -4,9 +4,8 @@ const { analyzeAndAlert } = require('./alerts');
 
 const symbol = 'MATICUSDT';
 const timeframe = '5m';
-const chatId = 'SEU_CHAT_ID'; // coloque seu chatId real aqui
 
-async function monitor() {
+async function monitor(chatId) {
   try {
     const candles = await getCandles(symbol, timeframe);
     const pivots = calculatePivotLevels(candles);
@@ -16,4 +15,4 @@ async function monitor() {
   }
 }
 
-setInterval(monitor, 60 * 1000); // Executa a cada minuto
+module.exports = { monitor };
