@@ -3,8 +3,8 @@ const { sendTelegramAlert } = require('./telegram');
 const ALERT_COOLDOWN = 60 * 60 * 1000; // 1 hora
 const DAILY_LIMIT = 100;
 
-const alertLog = new Map(); // `${symbol}_${type}` → timestamp
-const alertCountByDay = new Map(); // YYYY-MM-DD → count
+const alertLog = new Map();
+const alertCountByDay = new Map();
 
 function resetDailyCount() {
   const today = new Date().toISOString().slice(0, 10);
@@ -42,55 +42,65 @@ function isHighVolume(candle, avgVolume) {
 
 function formatAlertMessage(symbol, type, entry, sl, tp, time) {
   const emoji = type === 'compra' ? '🚀' : '🛑';
-  return `${emoji} ${type.toUpperCase()} confirmada para ${symbol}!\n` +
-         `Entrada: ${entry.toFixed(6)}\n` +
-         `Stop Loss: ${sl.toFixed(6)}\n` +
-         `Take Profit: ${tp.toFixed(6)}\n` +
+  return `${emoji} ${type.toUpperCase()} confirmada para ${symbol}!
+` +
+         `Entrada: ${entry.toFixed(6)}
+` +
+         `Stop Loss: ${sl.toFixed(6)}
+` +
+         `Take Profit: ${tp.toFixed(6)}
+` +
          `Horário (UTC): ${time}`;
 }
 
-async function analyzeAndAlert(symbol, timeframe, candles, pivots, chatId) {
-  if (!pivots) return;
+async function analyzeAndAlert(symbol, candlesByTf, pivots4h, fiboLevels, chatId) {
+  if (!pivots4h) return;
 
-  const last = candles.at(-1);
-  const prev = candles.at(-2);
-  if (!last || !prev) return;
+  const candles4h = candlesByTf['4h'];
+  const candles1h = candlesByTf['1h'];
+  const candles1d = candlesByTf['1d'];
 
-  const volumes = candles.map(c => c.volume);
+  const last4h = candles4h.at(-1);
+  const prev4h = candles4h.at(-2);
+  if (!last4h || !prev4h) return;
+
+  const volumes = candles4h.map(c => c.volume);
   const avgVolume = volumes.reduce((a, b) => a + b, 0) / volumes.length;
 
-  const { pivot, R1, S1 } = pivots;
-
-  if (prev.close <= R1 && last.close > R1 && isStrongCandle(last) && isHighVolume(last, avgVolume)) {
-    const dist = Math.abs(last.close - R1) / R1;
+  // Compra
+  if (prev4h.close <= pivots4h.R1 && last4h.close > pivots4h.R1 &&
+      isStrongCandle(last4h) && isHighVolume(last4h, avgVolume) &&
+      isNearFiboLevel(last4h.close, fiboLevels)) {
+    const dist = Math.abs(last4h.close - pivots4h.R1) / pivots4h.R1;
     if (dist <= 0.002) {
-      const entry = last.close;
-      const sl = pivot;
+      const entry = last4h.close;
+      const sl = pivots4h.pivot;
       const risk = entry - sl;
       const tp = entry + 3 * risk;
-
       if (canSendAlert(symbol, 'compra')) {
         const time = new Date().toISOString();
         const msg = formatAlertMessage(symbol, 'compra', entry, sl, tp, time);
         await sendTelegramAlert(chatId, msg);
-        console.log(`[${time}] ALERTA COMPRA enviado para ${symbol}`);
+        console.log(`[${time}] ALERTA COMPRA enviado para ${symbol} (Volume: ${last4h.volume}, Candlestick forte, Próximo Fibonacci)`);
       }
     }
   }
 
-  if (prev.close >= S1 && last.close < S1 && isStrongCandle(last) && isHighVolume(last, avgVolume)) {
-    const dist = Math.abs(last.close - S1) / S1;
+  // Venda
+  if (prev4h.close >= pivots4h.S1 && last4h.close < pivots4h.S1 &&
+      isStrongCandle(last4h) && isHighVolume(last4h, avgVolume) &&
+      isNearFiboLevel(last4h.close, fiboLevels)) {
+    const dist = Math.abs(last4h.close - pivots4h.S1) / pivots4h.S1;
     if (dist <= 0.002) {
-      const entry = last.close;
-      const sl = pivot;
+      const entry = last4h.close;
+      const sl = pivots4h.pivot;
       const risk = sl - entry;
       const tp = entry - 3 * risk;
-
       if (canSendAlert(symbol, 'venda')) {
         const time = new Date().toISOString();
         const msg = formatAlertMessage(symbol, 'venda', entry, sl, tp, time);
         await sendTelegramAlert(chatId, msg);
-        console.log(`[${time}] ALERTA VENDA enviado para ${symbol}`);
+        console.log(`[${time}] ALERTA VENDA enviado para ${symbol} (Volume: ${last4h.volume}, Candlestick forte, Próximo Fibonacci)`);
       }
     }
   }

@@ -14,4 +14,20 @@ async function getCandles(symbol, interval = '5m', limit = 100) {
   }));
 }
 
-module.exports = { getCandles };
+async function getTopVolatileSymbols(limit = 10) {
+  // Obtém 24h ticker price change statistics
+  const url = 'https://api.binance.com/api/v3/ticker/24hr';
+  const res = await axios.get(url);
+  const symbols = res.data
+    .filter(s => s.symbol.endsWith('USDT') && !s.symbol.includes('UP') && !s.symbol.includes('DOWN'))
+    .map(s => ({
+      symbol: s.symbol,
+      priceChangePercent: parseFloat(s.priceChangePercent)
+    }))
+    .sort((a, b) => Math.abs(b.priceChangePercent) - Math.abs(a.priceChangePercent))
+    .slice(0, limit)
+    .map(s => s.symbol);
+  return symbols;
+}
+
+module.exports = { getCandles, getTopVolatileSymbols };
