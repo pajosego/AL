@@ -1,10 +1,10 @@
 const { sendTelegramAlert } = require('./telegram');
 
-const ALERT_COOLDOWN = 60 * 60 * 1000; // 1 hora em ms
+const ALERT_COOLDOWN = 60 * 60 * 1000; // 1h
 const DAILY_LIMIT = 100;
 
-const alertLog = new Map(); // key: `${symbol}_${type}`, value: timestamp último alerta
-const alertCountByDay = new Map(); // key: data YYYY-MM-DD, value: count de alertas
+const alertLog = new Map();
+const alertCountByDay = new Map();
 
 function resetDailyCount() {
   const today = new Date().toISOString().slice(0, 10);
@@ -18,12 +18,10 @@ function canSendAlert(symbol, type) {
   const now = Date.now();
   const key = `${symbol}_${type}`;
 
-  // Verifica limite diário total
   const today = new Date().toISOString().slice(0, 10);
-  let count = alertCountByDay.get(today) || 0;
+  const count = alertCountByDay.get(today) || 0;
   if (count >= DAILY_LIMIT) return false;
 
-  // Verifica cooldown
   if (!alertLog.has(key) || now - alertLog.get(key) > ALERT_COOLDOWN) {
     alertLog.set(key, now);
     alertCountByDay.set(today, count + 1);
@@ -33,10 +31,9 @@ function canSendAlert(symbol, type) {
 }
 
 function isStrongCandle(candle) {
-  const bodySize = Math.abs(candle.close - candle.open);
-  const candleRange = candle.high - candle.low;
-  if (candleRange === 0) return false;
-  return bodySize / candleRange > 0.6;
+  const body = Math.abs(candle.close - candle.open);
+  const range = candle.high - candle.low;
+  return range !== 0 && body / range > 0.6;
 }
 
 function isHighVolume(candle, avgVolume) {
@@ -55,29 +52,25 @@ function formatAlertMessage(symbol, type, entry, sl, tp, time) {
 async function analyzeAndAlert(symbol, timeframe, candles, pivots, chatId) {
   if (!pivots) return;
 
-  const lastCandle = candles.at(-1);
-  const prevCandle = candles.at(-2);
-  if (!lastCandle || !prevCandle) return;
+  const last = candles.at(-1);
+  const prev = candles.at(-2);
+  if (!last || !prev) return;
 
-  const volumes = candles.map(c => c.volume);
-  const avgVolume = volumes.reduce((a,b) => a+b, 0) / volumes.length;
-
+  const avgVol = candles.map(c => c.volume).reduce((a, b) => a + b, 0) / candles.length;
   const { pivot, R1, S1 } = pivots;
 
-  // Compra (rompimento R1)
+  // Compra
   if (
-    prevCandle.close <= R1 &&
-    lastCandle.close > R1 &&
-    isStrongCandle(lastCandle) &&
-    isHighVolume(lastCandle, avgVolume)
+    prev.close <= R1 &&
+    last.close > R1 &&
+    isStrongCandle(last) &&
+    isHighVolume(last, avgVol)
   ) {
-    const distRetest = Math.abs(lastCandle.close - R1) / R1;
-    if (distRetest <= 0.002) {
-      const entry = lastCandle.close;
+    const dist = Math.abs(last.close - R1) / R1;
+    if (dist <= 0.002) {
+      const entry = last.close;
       const sl = pivot;
-      const risk = entry - sl;
-      const tp = entry + risk * 3;
-
+      const tp = entry + (entry - sl) * 3;
       if (canSendAlert(symbol, 'compra')) {
         const time = new Date().toISOString();
         const msg = formatAlertMessage(symbol, 'compra', entry, sl, tp, time);
@@ -86,20 +79,18 @@ async function analyzeAndAlert(symbol, timeframe, candles, pivots, chatId) {
       }
     }
   }
-  // Venda (rompimento S1)
+  // Venda
   else if (
-    prevCandle.close >= S1 &&
-    lastCandle.close < S1 &&
-    isStrongCandle(lastCandle) &&
-    isHighVolume(lastCandle, avgVolume)
+    prev.close >= S1 &&
+    last.close < S1 &&
+    isStrongCandle(last) &&
+    isHighVolume(last, avgVol)
   ) {
-    const distRetest = Math.abs(lastCandle.close - S1) / S1;
-    if (distRetest <= 0.002) {
-      const entry = lastCandle.close;
+    const dist = Math.abs(last.close - S1) / S1;
+    if (dist <= 0.002) {
+      const entry = last.close;
       const sl = pivot;
-      const risk = sl - entry;
-      const tp = entry - risk * 3;
-
+      const tp = entry - (sl - entry) * 3;
       if (canSendAlert(symbol, 'venda')) {
         const time = new Date().toISOString();
         const msg = formatAlertMessage(symbol, 'venda', entry, sl, tp, time);

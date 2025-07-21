@@ -1,29 +1,19 @@
-const { fetchCandles } = require('./binance');
-const { calculatePivotLevels } = require('./calculatePivotLevels');
+const { getCandles } = require('./binance');
+const { calculatePivotLevels } = require('./pivotPoints');
 const { analyzeAndAlert } = require('./alerts');
 
-const SYMBOLS = ['BTCUSDT', 'ETHUSDT']; // Pode adicionar mais pares
-const TIMEFRAMES = ['15m', '1h'];       // Timeframes que quiser monitorar
-const CHAT_ID = process.env.TELEGRAM_CHAT_ID;
+const symbol = 'MATICUSDT';
+const timeframe = '5m';
+const chatId = 'SEU_CHAT_ID'; // coloque seu chatId real aqui
 
 async function monitor() {
-  for (const symbol of SYMBOLS) {
-    for (const tf of TIMEFRAMES) {
-      const candles = await fetchCandles(symbol, tf, 50);
-      if (candles.length === 0) {
-        console.log(`Sem candles para ${symbol} ${tf}`);
-        continue;
-      }
-      const pivots = calculatePivotLevels(candles);
-      await analyzeAndAlert(symbol, tf, candles, pivots, CHAT_ID);
-    }
+  try {
+    const candles = await getCandles(symbol, timeframe);
+    const pivots = calculatePivotLevels(candles);
+    await analyzeAndAlert(symbol, timeframe, candles, pivots, chatId);
+  } catch (err) {
+    console.error('Erro no monitor:', err.message);
   }
 }
 
-async function startMonitoring() {
-  // Roda a cada 15 minutos, por exemplo
-  await monitor();
-  setInterval(monitor, 15 * 60 * 1000);
-}
-
-startMonitoring();
+setInterval(monitor, 60 * 1000); // Executa a cada minuto
