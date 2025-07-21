@@ -1,4 +1,3 @@
-// alerts.js
 const { sendTelegramAlert } = require('./sendTelegramAlert');
 const { detectSupportResistance } = require('./supportResistance');
 const { isNearFiboLevel } = require('./fibonacciLevels');
@@ -19,7 +18,6 @@ async function analyzeAndAlert(symbol, timeframe, candles, pivots, chatId) {
     const isSupport = lastCandle.low <= level;
     const isResistance = lastCandle.high >= level;
 
-    // Suporte rompido e reteste (exemplo simplificado)
     if (isSupport && lastCandle.volume > averageVolume(candles)) {
       if (isNearFiboLevel(level, pivots)) {
         alert = `📉 ${symbol} (${timeframe}) possível rompimento de suporte em ${level.toFixed(4)} confirmado por Fibonacci. Volume forte.`;
@@ -27,7 +25,6 @@ async function analyzeAndAlert(symbol, timeframe, candles, pivots, chatId) {
       }
     }
 
-    // Resistência rompida e reteste
     if (isResistance && lastCandle.volume > averageVolume(candles)) {
       if (isNearFiboLevel(level, pivots)) {
         alert = `📈 ${symbol} (${timeframe}) possível rompimento de resistência em ${level.toFixed(4)} confirmado por Fibonacci. Volume forte.`;
