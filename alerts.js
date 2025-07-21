@@ -1,37 +1,56 @@
+// alerts.js
 const { sendTelegramAlert } = require('./sendTelegramAlert');
-const logger = require('./logger');
+const { detectSupportResistance } = require('./supportResistance');
+const { isNearFiboLevel } = require('./fibonacciLevels');
 
-// Exemplo simplificado de padrão candle: martelo, engulfing etc (pode expandir)
-function isBullishReversal(candle, prevCandle) {
-  // Exemplo básico
-  return candle.close > candle.open && candle.close > prevCandle.close;
-}
-
-function isBearishReversal(candle, prevCandle) {
-  return candle.close < candle.open && candle.close < prevCandle.close;
-}
-
-async function analyzeAndAlert(symbol, timeframe, candles, pivots, levels, chatId) {
-  if (!candles.length) return false;
-
-  const lastCandle = candles[candles.length - 1];
-  const prevCandle = candles[candles.length - 2];
-
-  // Check volume high relative to average (last 20 candles)
-  const avgVolume = candles.slice(-21, -1).reduce((a, c) => a + c.volume, 0) / 20;
-  const volumeSpike = lastCandle.volume > avgVolume * 1.5;
-
-  // Confirm reteste de suporte/resistência + volume forte + padrão reversal
-  // Exemplo: último close próximo de suporte/resistência
-
-  let alertMessage = null;
-
-  // Confirma se preço rompeu níveis pivô
-  if (lastCandle.close > pivots.R1 && volumeSpike && isBullishReversal(lastCandle, prevCandle)) {
-    alertMessage = `🚀 *Compra* detectada\n📊 ${symbol} (${timeframe})\n🟢 Rompimento acima de R1 (${pivots.R1}) com volume alto e padrão bullish.`;
-  } else if (lastCandle.close < pivots.S1 && volumeSpike && isBearishReversal(lastCandle, prevCandle)) {
-    alertMessage = `📉 *Venda* detectada\n📊 ${symbol} (${timeframe})\n🔴 Rompimento abaixo de S1 (${pivots.S1}) com volume alto e padrão bearish.`;
+async function analyzeAndAlert(symbol, timeframe, candles, pivots, chatId) {
+  if (!candles || candles.length === 0) {
+    console.log(`[Alert] Sem candles para analisar ${symbol} ${timeframe}`);
+    return;
   }
 
-  if (alertMessage) {
-    await sendTelegramAlert(chatId, alert
+  const lastCandle = candles[candles.length - 1];
+  const srLevels = detectSupportResistance(candles);
+
+  let alert = '';
+
+  // Exemplo simplificado: alerta se romper suporte ou resistência com volume alto
+  for (const level of srLevels) {
+    const isSupport = lastCandle.low <= level;
+    const isResistance = lastCandle.high >= level;
+
+    // Suporte rompido e reteste (exemplo simplificado)
+    if (isSupport && lastCandle.volume > averageVolume(candles)) {
+      if (isNearFiboLevel(level, pivots)) {
+        alert = `📉 ${symbol} (${timeframe}) possível rompimento de suporte em ${level.toFixed(4)} confirmado por Fibonacci. Volume forte.`;
+        break;
+      }
+    }
+
+    // Resistência rompida e reteste
+    if (isResistance && lastCandle.volume > averageVolume(candles)) {
+      if (isNearFiboLevel(level, pivots)) {
+        alert = `📈 ${symbol} (${timeframe}) possível rompimento de resistência em ${level.toFixed(4)} confirmado por Fibonacci. Volume forte.`;
+        break;
+      }
+    }
+  }
+
+  if (alert) {
+    try {
+      await sendTelegramAlert(chatId, alert);
+      console.log(`[Alert] Enviado: ${alert}`);
+    } catch (error) {
+      console.error(`[Alert] Erro ao enviar alerta: ${error.message}`);
+    }
+  } else {
+    console.log(`[Alert] Nenhum alerta para ${symbol} (${timeframe})`);
+  }
+}
+
+function averageVolume(candles) {
+  const sum = candles.reduce((acc, c) => acc + c.volume, 0);
+  return sum / candles.length;
+}
+
+module.exports = { analyzeAndAlert };
