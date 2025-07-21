@@ -1,54 +1,37 @@
-const { sendTelegramAlert } = require('./telegram');
-const { log } = require('./logger');
-const { isStrongBullishCandle, isStrongBearishCandle } = require('./candles');
+const { sendTelegramAlert } = require('./sendTelegramAlert');
+const logger = require('./logger');
 
-async function analyzeAndAlert(symbol, timeframe, candles, levels, chatId) {
-  const last = candles[candles.length - 1];
-  const previous = candles[candles.length - 2];
-
-  const messageHeader = `📊 *${symbol}* (${timeframe})`;
-
-  const alertConditions = [];
-
-  // Suporte e resistência rompido
-  levels.levels.forEach((level) => {
-    const touchedSupport = previous.low > level && last.low <= level;
-    const touchedResistance = previous.high < level && last.high >= level;
-
-    if (touchedSupport && isStrongBearishCandle(last)) {
-      alertConditions.push(`🔻 Rompido Suporte em ${level}`);
-    }
-
-    if (touchedResistance && isStrongBullishCandle(last)) {
-      alertConditions.push(`🔺 Rompida Resistência em ${level}`);
-    }
-  });
-
-  // Ponto Pivot
-  if (levels.pivot) {
-    const { pivot, R1, R2, S1, S2 } = levels.pivot;
-    if (last.close > R2) {
-      alertConditions.push(`🚀 Acima de R2 (${R2})`);
-    } else if (last.close < S2) {
-      alertConditions.push(`⚠️ Abaixo de S2 (${S2})`);
-    }
-  }
-
-  // Fibonacci
-  if (levels.fibo) {
-    const nearFibo = levels.fibo.find(level => Math.abs((level - last.close) / last.close) < 0.005);
-    if (nearFibo) {
-      alertConditions.push(`🔄 Próximo nível de Fibonacci: ${nearFibo.toFixed(2)}`);
-    }
-  }
-
-  if (alertConditions.length > 0) {
-    const message = `${messageHeader}\n\n${alertConditions.join('\n')}\n\n📈 Candle Fechou: ${last.close}`;
-    await sendTelegramAlert(chatId, message);
-    log(`[Alert] ${symbol} ${timeframe} ➝ ${alertConditions.join(' | ')}`);
-  } else {
-    log(`[Monitor] ${symbol} ${timeframe} ➝ Nenhuma condição atendida`);
-  }
+// Exemplo simplificado de padrão candle: martelo, engulfing etc (pode expandir)
+function isBullishReversal(candle, prevCandle) {
+  // Exemplo básico
+  return candle.close > candle.open && candle.close > prevCandle.close;
 }
 
-module.exports = { analyzeAndAlert };
+function isBearishReversal(candle, prevCandle) {
+  return candle.close < candle.open && candle.close < prevCandle.close;
+}
+
+async function analyzeAndAlert(symbol, timeframe, candles, pivots, levels, chatId) {
+  if (!candles.length) return false;
+
+  const lastCandle = candles[candles.length - 1];
+  const prevCandle = candles[candles.length - 2];
+
+  // Check volume high relative to average (last 20 candles)
+  const avgVolume = candles.slice(-21, -1).reduce((a, c) => a + c.volume, 0) / 20;
+  const volumeSpike = lastCandle.volume > avgVolume * 1.5;
+
+  // Confirm reteste de suporte/resistência + volume forte + padrão reversal
+  // Exemplo: último close próximo de suporte/resistência
+
+  let alertMessage = null;
+
+  // Confirma se preço rompeu níveis pivô
+  if (lastCandle.close > pivots.R1 && volumeSpike && isBullishReversal(lastCandle, prevCandle)) {
+    alertMessage = `🚀 *Compra* detectada\n📊 ${symbol} (${timeframe})\n🟢 Rompimento acima de R1 (${pivots.R1}) com volume alto e padrão bullish.`;
+  } else if (lastCandle.close < pivots.S1 && volumeSpike && isBearishReversal(lastCandle, prevCandle)) {
+    alertMessage = `📉 *Venda* detectada\n📊 ${symbol} (${timeframe})\n🔴 Rompimento abaixo de S1 (${pivots.S1}) com volume alto e padrão bearish.`;
+  }
+
+  if (alertMessage) {
+    await sendTelegramAlert(chatId, alert
