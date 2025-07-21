@@ -1,9 +1,20 @@
-function isStrongBullishCandle(candle) {
-  return candle.close > candle.open && (candle.close - candle.open) / (candle.high - candle.low) > 0.6;
+const { fetchCandlesBinance } = require('./fetchCandlesBinance');
+const { fetchCandlesTwelve } = require('./fetchCandlesTwelve');
+
+const binanceSymbolMap = {
+  BTCUSD: 'BTCUSDT',
+  ETHUSD: 'ETHUSDT',
+  BCHUSD: 'BCHUSDT',
+  XRPUSD: 'XRPUSDT',
+  LTCUSD: 'LTCUSDT',
+};
+
+async function fetchCandles(symbol, timeframe = '1h') {
+  if (binanceSymbolMap[symbol]) {
+    return fetchCandlesBinance(symbol, timeframe);
+  } else {
+    return fetchCandlesTwelve(symbol, timeframe);
+  }
 }
 
-function isStrongBearishCandle(candle) {
-  return candle.open > candle.close && (candle.open - candle.close) / (candle.high - candle.low) > 0.6;
-}
-
-module.exports = { isStrongBullishCandle, isStrongBearishCandle };
+module.exports = { fetchCandles };

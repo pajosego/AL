@@ -1,3 +1,4 @@
+// fetchCandlesBinance.js
 const axios = require('axios');
 
 const binanceSymbolMap = {
