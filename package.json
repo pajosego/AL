@@ -1,13 +1,12 @@
 {
-  "name": "xtb-volatility-monitor",
+  "name": "monitor-trading",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
-    "axios": "^1.10.0",
-    "dotenv": "^17.2.0",
-    "node-telegram-bot-api": "^0.66.0"
+    "axios": "^1.4.0",
+    "dotenv": "^17.2.0"
   }
 }

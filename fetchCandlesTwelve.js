@@ -1,7 +1,7 @@
 const axios = require('axios');
 const API_KEY = process.env.TWELVE_API_KEY;
 
-async function fetchCandles(symbol, timeframe = '1h') {
+async function fetchCandlesTwelve(symbol, timeframe) {
   const url = `https://api.twelvedata.com/time_series?symbol=${symbol}&interval=${timeframe}&apikey=${API_KEY}&format=json&outputsize=100`;
 
   const response = await axios.get(url);
@@ -19,4 +19,4 @@ async function fetchCandles(symbol, timeframe = '1h') {
   }
 }
 
-module.exports = { fetchCandles };
+module.exports = { fetchCandlesTwelve };

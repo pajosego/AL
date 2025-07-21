@@ -5,24 +5,24 @@ const { monitorAllTimeframes } = require('./monitor');
 const CHAT_ID = process.env.CHAT_ID;
 
 const symbolsToMonitor = [
-  // Top 5 Criptos da XTB
+  // Top 5 Criptos (Binance)
   'BTCUSD', 'ETHUSD', 'BCHUSD', 'XRPUSD', 'LTCUSD',
-  // Top 5 Forex da XTB
+  // Top 5 Forex (Twelve Data)
   'EURUSD', 'USDJPY', 'GBPUSD', 'AUDUSD', 'USDCAD',
-  // Top 5 Índices da XTB
+  // Top 5 Índices (Twelve Data)
   'US500', 'US100', 'US30', 'DE30', 'UK100',
-  // Top 5 Stocks da XTB
+  // Top 5 Stocks (Twelve Data)
   'AAPL.US', 'TSLA.US', 'JPM.US', 'MC.FR', 'SHEL.US'
 ];
 
 async function start() {
   if (!CHAT_ID) {
-    console.error('❌ Erro: CHAT_ID não definido. Verifique seu arquivo .env.');
+    console.error('❌ Erro: CHAT_ID não definido no .env');
     process.exit(1);
   }
 
   await monitorAllTimeframes(CHAT_ID, symbolsToMonitor);
-  setInterval(() => monitorAllTimeframes(CHAT_ID, symbolsToMonitor), 60 * 1000); // A cada minuto
+  setInterval(() => monitorAllTimeframes(CHAT_ID, symbolsToMonitor), 60 * 1000); // a cada 1 minuto
 
   process.stdin.resume();
 }

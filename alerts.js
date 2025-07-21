@@ -1,10 +1,10 @@
 const { sendTelegramAlert } = require('./sendTelegramAlert');
-const { detectSupportResistance } = require('./supportResistance');
+const { detectSupportResistance, calculatePivots } = require('./supportResistance');
 const { isNearFiboLevel } = require('./fibonacciLevels');
 
 async function analyzeAndAlert(symbol, timeframe, candles, pivots, chatId) {
   if (!candles || candles.length === 0) {
-    console.log(`[Alert] Sem candles para analisar ${symbol} ${timeframe}`);
+    console.log(`[Alert] Sem candles para analisar ${symbol} (${timeframe})`);
     return;
   }
 
@@ -13,19 +13,18 @@ async function analyzeAndAlert(symbol, timeframe, candles, pivots, chatId) {
 
   let alert = '';
 
-  // Exemplo simplificado: alerta se romper suporte ou resistência com volume alto
   for (const level of srLevels) {
-    const isSupport = lastCandle.low <= level;
-    const isResistance = lastCandle.high >= level;
+    const isSupportBroken = lastCandle.low <= level;
+    const isResistanceBroken = lastCandle.high >= level;
 
-    if (isSupport && lastCandle.volume > averageVolume(candles)) {
+    if (isSupportBroken && lastCandle.volume > averageVolume(candles)) {
       if (isNearFiboLevel(level, pivots)) {
         alert = `📉 ${symbol} (${timeframe}) possível rompimento de suporte em ${level.toFixed(4)} confirmado por Fibonacci. Volume forte.`;
         break;
       }
     }
 
-    if (isResistance && lastCandle.volume > averageVolume(candles)) {
+    if (isResistanceBroken && lastCandle.volume > averageVolume(candles)) {
       if (isNearFiboLevel(level, pivots)) {
         alert = `📈 ${symbol} (${timeframe}) possível rompimento de resistência em ${level.toFixed(4)} confirmado por Fibonacci. Volume forte.`;
         break;
@@ -46,8 +45,7 @@ async function analyzeAndAlert(symbol, timeframe, candles, pivots, chatId) {
 }
 
 function averageVolume(candles) {
-  const sum = candles.reduce((acc, c) => acc + c.volume, 0);
-  return sum / candles.length;
+  return candles.reduce((acc, c) => acc + c.volume, 0) / candles.length;
 }
 
 module.exports = { analyzeAndAlert };
