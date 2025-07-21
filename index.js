@@ -5,13 +5,13 @@ const { monitorAllTimeframes } = require('./monitor');
 const CHAT_ID = process.env.CHAT_ID;
 
 const symbolsToMonitor = [
-  // Top 5 Criptos (Binance)
+  // Criptos Binance
   'BTCUSD', 'ETHUSD', 'BCHUSD', 'XRPUSD', 'LTCUSD',
-  // Top 5 Forex (Twelve Data)
+  // Forex (Twelve Data)
   'EURUSD', 'USDJPY', 'GBPUSD', 'AUDUSD', 'USDCAD',
-  // Top 5 Índices (Twelve Data)
+  // Índices (Twelve Data)
   'US500', 'US100', 'US30', 'DE30', 'UK100',
-  // Top 5 Stocks (Twelve Data)
+  // Stocks (Twelve Data)
   'AAPL.US', 'TSLA.US', 'JPM.US', 'MC.FR', 'SHEL.US'
 ];
 

@@ -1,39 +1,23 @@
-// calculateATR.js
 function calculateATR(candles, period = 14) {
-  if (candles.length < period + 1) {
-    throw new Error('Candles insuficientes para cálculo do ATR');
+  if (candles.length < period + 1) return null;
+
+  const trs = [];
+  for (let i = 1; i < candles.length; i++) {
+    const high = candles[i].high;
+    const low = candles[i].low;
+    const prevClose = candles[i - 1].close;
+
+    const tr = Math.max(
+      high - low,
+      Math.abs(high - prevClose),
+      Math.abs(low - prevClose)
+    );
+    trs.push(tr);
   }
 
-  let trs = [];
-  for (let i = 1; i <= period; i++) {
-    const current = candles[i];
-    const prev = candles[i - 1];
-
-    const highLow = current.high - current.low;
-    const highClose = Math.abs(current.high - prev.close);
-    const lowClose = Math.abs(current.low - prev.close);
-
-    const trueRange = Math.max(highLow, highClose, lowClose);
-    trs.push(trueRange);
-  }
-
-  // ATR inicial é média simples dos TRs
-  let atr = trs.reduce((a, b) => a + b, 0) / period;
-
-  // ATR suavizado para os candles seguintes
-  for (let i = period + 1; i < candles.length; i++) {
-    const current = candles[i];
-    const prev = candles[i - 1];
-
-    const highLow = current.high - current.low;
-    const highClose = Math.abs(current.high - prev.close);
-    const lowClose = Math.abs(current.low - prev.close);
-
-    const trueRange = Math.max(highLow, highClose, lowClose);
-
-    atr = (atr * (period - 1) + trueRange) / period;
-  }
-
+  // ATR é a média simples dos TRs no período
+  const slice = trs.slice(-period);
+  const atr = slice.reduce((acc, val) => acc + val, 0) / period;
   return atr;
 }
 
