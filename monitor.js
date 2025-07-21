@@ -1,30 +1,31 @@
-const { getTopVolatileSymbols, getCandles } = require('./binance');
+const { getCandles, getTopVolatileSymbols } = require('./binance');
 const { calculatePivotLevels } = require('./pivotPoints');
 const { analyzeAndAlert } = require('./alerts');
-const { calculateFibonacciLevels, isNearFiboLevel } = require('./fibonacci');
 
 const TIMEFRAMES = ['1d', '4h', '1h'];
-const MAX_SYMBOLS = 10;
+
+async function monitorSymbolInTimeframe(symbol, timeframe, chatId) {
+  try {
+    const candles = await getCandles(symbol, timeframe);
+    const pivots = calculatePivotLevels(candles);
+    await analyzeAndAlert(symbol, timeframe, candles, pivots, chatId);
+  } catch (err) {
+    console.error(`[Monitor] Erro no monitoramento de ${symbol} ${timeframe}:`, err.message);
+  }
+}
 
 async function monitorAllTimeframes(chatId) {
   try {
-    const symbols = await getTopVolatileSymbols(MAX_SYMBOLS);
-    console.log('[Monitor] Symbols to monitor:', symbols.join(', '));
+    const symbols = await getTopVolatileSymbols();
+    console.log(`[Monitor] Symbols to monitor: ${symbols.join(', ')}`);
 
     for (const symbol of symbols) {
-      const candlesByTf = {};
-      for (const tf of TIMEFRAMES) {
-        const candles = await getCandles(symbol, tf);
-        candlesByTf[tf] = candles;
+      for (const timeframe of TIMEFRAMES) {
+        await monitorSymbolInTimeframe(symbol, timeframe, chatId);
       }
-      // 4h pivot + fibo
-      const pivots4h = calculatePivotLevels(candlesByTf['4h']);
-      const fiboLevels = calculateFibonacciLevels(candlesByTf['4h']);
-
-      await analyzeAndAlert(symbol, candlesByTf, pivots4h, fiboLevels, chatId);
     }
-  } catch (err) {
-    console.error('[Monitor] Erro:', err.message);
+  } catch (e) {
+    console.error('[Monitor] Erro geral no monitor:', e.message);
   }
 }
 

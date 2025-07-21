@@ -1,5 +1,5 @@
 {
-  "name": "crypto-alerts-multitf",
+  "name": "crypto-alerts-multitimeframe",
   "version": "1.0.0",
   "main": "index.js",
   "scripts": {

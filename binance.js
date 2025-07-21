@@ -14,20 +14,20 @@ async function getCandles(symbol, interval = '5m', limit = 100) {
   }));
 }
 
-async function getTopVolatileSymbols(limit = 10) {
-  // Obtém 24h ticker price change statistics
-  const url = 'https://api.binance.com/api/v3/ticker/24hr';
-  const res = await axios.get(url);
-  const symbols = res.data
-    .filter(s => s.symbol.endsWith('USDT') && !s.symbol.includes('UP') && !s.symbol.includes('DOWN'))
-    .map(s => ({
-      symbol: s.symbol,
-      priceChangePercent: parseFloat(s.priceChangePercent)
-    }))
-    .sort((a, b) => Math.abs(b.priceChangePercent) - Math.abs(a.priceChangePercent))
-    .slice(0, limit)
-    .map(s => s.symbol);
-  return symbols;
+async function getTopVolatileSymbols() {
+  // Pega as 100 moedas e retorna as 10 mais voláteis (variação % maior no último dia)
+  try {
+    const res = await axios.get('https://api.binance.com/api/v3/ticker/24hr');
+    const filtered = res.data.filter(d => d.symbol.endsWith('USDT'));
+    filtered.forEach(c => {
+      c.priceChangePercent = parseFloat(c.priceChangePercent);
+    });
+    filtered.sort((a, b) => Math.abs(b.priceChangePercent) - Math.abs(a.priceChangePercent));
+    return filtered.slice(0, 10).map(c => c.symbol);
+  } catch (e) {
+    console.error('[binance] Erro ao buscar símbolos voláteis:', e.message);
+    return ['BTCUSDT', 'ETHUSDT', 'BNBUSDT']; // fallback
+  }
 }
 
 module.exports = { getCandles, getTopVolatileSymbols };

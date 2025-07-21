@@ -1,4 +1,5 @@
 const axios = require('axios');
+
 const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
 
 async function sendTelegramAlert(chatId, text) {
@@ -6,6 +7,7 @@ async function sendTelegramAlert(chatId, text) {
     console.error('❌ TELEGRAM_TOKEN não definido.');
     return;
   }
+
   const url = `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`;
   try {
     await axios.post(url, {
