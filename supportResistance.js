@@ -1,23 +1,12 @@
-// supportResistance.js
 function calculatePivots(candles) {
-  if (!candles.length) throw new Error('Sem candles para calcular pivots.');
+  const last = candles[candles.length - 1];
+  const prev = candles[candles.length - 2];
 
-  const highs = candles.map(c => c.high);
-  const lows = candles.map(c => c.low);
-  const closes = candles.map(c => c.close);
+  const pivot = (prev.high + prev.low + prev.close) / 3;
+  const support = pivot - (prev.high - prev.low);
+  const resistance = pivot + (prev.high - prev.low);
 
-  const high = Math.max(...highs);
-  const low = Math.min(...lows);
-  const close = closes[closes.length - 1];
-
-  // Pivot simples (clássico)
-  const pivot = (high + low + close) / 3;
-
-  // Suporte e resistência
-  const resistance = 2 * pivot - low;
-  const support = 2 * pivot - high;
-
-  return { pivot, resistance, support };
+  return { support, resistance };
 }
 
 module.exports = { calculatePivots };

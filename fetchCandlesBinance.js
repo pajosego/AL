@@ -1,4 +1,3 @@
-// fetchCandlesBinance.js
 const axios = require('axios');
 
 const binanceSymbolMap = {
@@ -7,6 +6,8 @@ const binanceSymbolMap = {
   BCHUSD: 'BCHUSDT',
   XRPUSD: 'XRPUSDT',
   LTCUSD: 'LTCUSDT',
+  SOLUSD: 'SOLUSDT',
+  PEPUSD: 'PEPUSDT',
 };
 
 const timeframeMap = {
@@ -16,17 +17,15 @@ const timeframeMap = {
 };
 
 async function fetchCandlesBinance(symbol, timeframe) {
-  const binanceSymbol = binanceSymbolMap[symbol];
-  if (!binanceSymbol) throw new Error(`Símbolo Binance não mapeado: ${symbol}`);
-
+  const binanceSymbol = binanceSymbolMap[symbol] || symbol;
   const interval = timeframeMap[timeframe];
-  if (!interval) throw new Error(`Timeframe inválido para Binance: ${timeframe}`);
+
+  if (!interval) throw new Error(`Timeframe inválido: ${timeframe}`);
 
   const url = `https://api.binance.com/api/v3/klines?symbol=${binanceSymbol}&interval=${interval}&limit=100`;
+  const response = await axios.get(url);
 
-  const res = await axios.get(url);
-
-  return res.data.map(c => ({
+  return response.data.map(c => ({
     datetime: new Date(c[0]).toISOString(),
     open: parseFloat(c[1]),
     high: parseFloat(c[2]),

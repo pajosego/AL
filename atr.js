@@ -1,21 +1,20 @@
-// atr.js
 function calculateATR(candles, period = 14) {
   if (candles.length < period + 1) return null;
 
-  let trs = [];
+  const trs = [];
+
   for (let i = 1; i <= period; i++) {
-    const current = candles[candles.length - 1 - (period - i)];
-    const prev = candles[candles.length - 2 - (period - i)];
+    const curr = candles[candles.length - i];
+    const prev = candles[candles.length - i - 1];
 
-    const highLow = current.high - current.low;
-    const highClose = Math.abs(current.high - prev.close);
-    const lowClose = Math.abs(current.low - prev.close);
+    const highLow = curr.high - curr.low;
+    const highClose = Math.abs(curr.high - prev.close);
+    const lowClose = Math.abs(curr.low - prev.close);
 
-    const tr = Math.max(highLow, highClose, lowClose);
-    trs.push(tr);
+    trs.push(Math.max(highLow, highClose, lowClose));
   }
 
-  const atr = trs.reduce((sum, val) => sum + val, 0) / period;
+  const atr = trs.reduce((acc, val) => acc + val, 0) / trs.length;
   return atr;
 }
 

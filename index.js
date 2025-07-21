@@ -1,30 +1,16 @@
-require('dotenv').config();
-
 const { monitorAllTimeframes } = require('./monitor');
 
-const CHAT_ID = process.env.CHAT_ID;
+// ID do chat (caso use Telegram). Use `null` se estiver apenas testando com console.log
+const chatId = null;
 
-const symbolsToMonitor = [
-  // Criptos Binance
-  'BTCUSD', 'ETHUSD', 'BCHUSD', 'XRPUSD', 'LTCUSD',
-  // Forex (Twelve Data)
-  'EURUSD', 'USDJPY', 'GBPUSD', 'AUDUSD', 'USDCAD',
-  // Índices (Twelve Data)
-  'US500', 'US100', 'US30', 'DE30', 'UK100',
-  // Stocks (Twelve Data)
-  'AAPL.US', 'TSLA.US', 'JPM.US', 'MC.FR', 'SHEL.US'
-];
+// Lista de criptos monitoradas (só criptos com suporte na Binance)
+const cryptoSymbols = ['BTCUSD', 'ETHUSD', 'BCHUSD', 'XRPUSD', 'LTCUSD'];
 
-async function start() {
-  if (!CHAT_ID) {
-    console.error('❌ Erro: CHAT_ID não definido no .env');
-    process.exit(1);
-  }
-
-  await monitorAllTimeframes(CHAT_ID, symbolsToMonitor);
-  setInterval(() => monitorAllTimeframes(CHAT_ID, symbolsToMonitor), 60 * 1000); // a cada 1 minuto
-
-  process.stdin.resume();
+async function startMonitoring() {
+  console.log(`[Monitor] Iniciando varredura às ${new Date().toISOString()}`);
+  await monitorAllTimeframes(chatId, cryptoSymbols);
 }
 
-start();
+// Executa a cada 5 minutos (300.000 ms)
+startMonitoring(); // Executa imediatamente
+setInterval(startMonitoring, 5 * 60 * 1000);
