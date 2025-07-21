@@ -1,51 +1,73 @@
-const { sendTelegramAlert } = require('./sendTelegramAlert');
-const { detectSupportResistance, calculatePivots } = require('./supportResistance');
-const { isNearFiboLevel } = require('./fibonacciLevels');
+const { calculateATR } = require('./calculateATR');
 
 async function analyzeAndAlert(symbol, timeframe, candles, pivots, chatId) {
-  if (!candles || candles.length === 0) {
-    console.log(`[Alert] Sem candles para analisar ${symbol} (${timeframe})`);
+  // ATR
+  let atr;
+  try {
+    atr = calculateATR(candles);
+  } catch {
+    console.log(`[Alert] ATR não calculado para ${symbol} ${timeframe} (candles insuficientes)`);
     return;
   }
 
   const lastCandle = candles[candles.length - 1];
-  const srLevels = detectSupportResistance(candles);
+  const close = lastCandle.close;
 
-  let alert = '';
+  // Detecta rompimento confirmado: candle fechou acima da resistência ou abaixo do suporte
+  const resistance = pivots.resistance;
+  const support = pivots.support;
 
-  for (const level of srLevels) {
-    const isSupportBroken = lastCandle.low <= level;
-    const isResistanceBroken = lastCandle.high >= level;
+  let direction = null;
+  let entry, stopLoss, takeProfit;
 
-    if (isSupportBroken && lastCandle.volume > averageVolume(candles)) {
-      if (isNearFiboLevel(level, pivots)) {
-        alert = `📉 ${symbol} (${timeframe}) possível rompimento de suporte em ${level.toFixed(4)} confirmado por Fibonacci. Volume forte.`;
-        break;
-      }
-    }
-
-    if (isResistanceBroken && lastCandle.volume > averageVolume(candles)) {
-      if (isNearFiboLevel(level, pivots)) {
-        alert = `📈 ${symbol} (${timeframe}) possível rompimento de resistência em ${level.toFixed(4)} confirmado por Fibonacci. Volume forte.`;
-        break;
-      }
-    }
-  }
-
-  if (alert) {
-    try {
-      await sendTelegramAlert(chatId, alert);
-      console.log(`[Alert] Enviado: ${alert}`);
-    } catch (error) {
-      console.error(`[Alert] Erro ao enviar alerta: ${error.message}`);
-    }
+  if (close > resistance) {
+    direction = 'breakout_up';
+    entry = close;
+    stopLoss = entry - 1.5 * atr;
+    takeProfit = entry + 3 * atr;
+  } else if (close < support) {
+    direction = 'breakout_down';
+    entry = close;
+    stopLoss = entry + 1.5 * atr;
+    takeProfit = entry - 3 * atr;
   } else {
-    console.log(`[Alert] Nenhum alerta para ${symbol} (${timeframe})`);
+    // Sem rompimento confirmado
+    return;
   }
+
+  // Formatar números com 4 casas decimais (ou adaptar)
+  const formatPrice = (p) => p.toFixed(4);
+
+  const emoji = direction === 'breakout_up' ? '📈' : '📉';
+  const breakoutType = direction === 'breakout_up' ? 'resistência' : 'suporte';
+
+  const message = `
+${emoji} ${symbol} (${timeframe}) rompimento confirmado de ${breakoutType}!
+Entrada: ${formatPrice(entry)}
+Stop Loss: ${formatPrice(stopLoss)}
+Take Profit: ${formatPrice(takeProfit)}
+Volume: ${lastCandle.volume.toFixed(0)}
+`;
+
+  // Aqui envia para o chat (exemplo Telegram)
+  await sendMessage(chatId, message.trim());
 }
 
-function averageVolume(candles) {
-  return candles.reduce((acc, c) => acc + c.volume, 0) / candles.length;
+async function sendMessage(chatId, message) {
+  // Exemplo usando Telegram Bot API - adapte conforme seu bot
+  const axios = require('axios');
+  const TELEGRAM_TOKEN = process.env.TELEGRAM_TOKEN;
+  const url = `https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage`;
+
+  try {
+    await axios.post(url, {
+      chat_id: chatId,
+      text: message,
+      parse_mode: 'Markdown',
+    });
+  } catch (err) {
+    console.error('Erro enviando mensagem:', err.message);
+  }
 }
 
 module.exports = { analyzeAndAlert };
