@@ -1,14 +1,18 @@
 // index.js
 require('dotenv').config();
-
 const { monitorAllTimeframes } = require('./monitor');
+const { log } = require('./logger');
 
 const CHAT_ID = process.env.CHAT_ID;
 
 const symbolsToMonitor = [
+  // Top 5 Criptos da XTB
   'BTCUSD', 'ETHUSD', 'BCHUSD', 'XRPUSD', 'LTCUSD',
+  // Top 5 Forex da XTB
   'EURUSD', 'USDJPY', 'GBPUSD', 'AUDUSD', 'USDCAD',
+  // Top 5 Índices da XTB
   'US500', 'US100', 'US30', 'DE30', 'UK100',
+  // Top 5 Stocks da XTB
   'AAPL.US', 'TSLA.US', 'JPM.US', 'MC.FR', 'SHEL.US'
 ];
 
@@ -18,9 +22,12 @@ async function start() {
     process.exit(1);
   }
 
+  log(`[Monitor] Iniciando monitoramento dos seguintes símbolos:\n${symbolsToMonitor.join(', ')}`);
+
   await monitorAllTimeframes(CHAT_ID, symbolsToMonitor);
-  setInterval(() => monitorAllTimeframes(CHAT_ID, symbolsToMonitor), 60 * 1000);
-  process.stdin.resume();
+  setInterval(() => monitorAllTimeframes(CHAT_ID, symbolsToMonitor), 60 * 1000); // A cada minuto
+
+  process.stdin.resume(); // Mantém o processo ativo
 }
 
 start();
